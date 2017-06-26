@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -10,8 +11,9 @@ type Writer interface {
 	Write([]byte) (int, error)
 }
 
-// A utility structure to collect metrics.
+// A utility structure to collect metrics concurrently.
 type Stats struct {
+	mu     sync.RWMutex
 	start  time.Time
 	keys   []string
 	values []int
@@ -19,6 +21,8 @@ type Stats struct {
 
 // Creates or updates a stored metric and returns its value.
 func (s *Stats) Add(k string, v int) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	for i := range s.keys {
 		if s.keys[i] == k {
 			s.values[i] += v
@@ -32,6 +36,8 @@ func (s *Stats) Add(k string, v int) int {
 
 // Initializes metric storage and start time, clearing previous values.
 func (s *Stats) Reset() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.keys = []string{}
 	s.values = []int{}
 	s.start = time.Now()
@@ -39,6 +45,8 @@ func (s *Stats) Reset() {
 
 // Returns the duration since Reset was called.
 func (s *Stats) Duration() time.Duration {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return time.Since(s.start)
 }
 
@@ -46,6 +54,8 @@ func (s *Stats) Duration() time.Duration {
 //
 // If no metrics exist, then no output will be written.
 func (s *Stats) Print(w Writer) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	for i := range s.keys {
 		fmt.Fprintf(w, "%s: %d\n", s.keys[i], s.values[i])
 	}
