@@ -19,6 +19,10 @@ func TestStats(t *testing.T) {
 		t.Fatal("expected execution duration greater than a single nanosecond...")
 	}
 	b.Reset()
+	if s.Json(&b); strings.Count(b.String(), "\n") != 4 {
+		t.Fatal("failed to properly print in json format...")
+	}
+	b.Reset()
 	s.Reset()
 	if s.Print(&b); strings.Count(b.String(), "\n") != 0 {
 		t.Fatal("reset failed to clear old values...")

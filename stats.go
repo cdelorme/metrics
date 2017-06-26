@@ -63,3 +63,30 @@ func (s *Stats) Print(w Writer) {
 		fmt.Fprintf(w, "%s\n", s.Duration())
 	}
 }
+
+// Uses a writer to print the json format.
+func (s *Stats) Json(w Writer) {
+	d, _ := s.MarshalJSON()
+	fmt.Fprintf(w, "%s", d)
+}
+
+// An override for json marshal which correctly prints all of the stored
+// key and value pairs, followed by execution time as "Duration".
+func (s *Stats) MarshalJSON() ([]byte, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	b := []byte("{\n")
+	for i := range s.keys {
+		b = append(b, []byte("\t"+fmt.Sprintf(`"%s": %d`, s.keys[i], s.values[i]))...)
+		if len(b) > 1 {
+			b = append(b, []byte(",")...)
+		}
+		b = append(b, []byte("\n")...)
+	}
+	if len(s.keys) > 0 {
+		b = append(b, []byte("\t"+fmt.Sprintf(`"Duration": "%s"`, s.Duration())+"\n")...)
+	}
+	b = append(b, []byte("}\n")...)
+	return b, nil
+}
